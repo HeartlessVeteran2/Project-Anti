@@ -47,7 +47,7 @@ dependencies {
     implementation 'androidx.cardview:cardview:1.0.0'
     
     // Kotlin standard library
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.22'
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib:2.2.0'
 
     // Shizuku dependencies
     implementation 'dev.rikka.shizuku:api:13.1.5'
