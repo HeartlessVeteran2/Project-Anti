@@ -4,10 +4,8 @@ import android.content.Context
 import android.net.wifi.WifiManager
 import android.util.Log
 import com.anti.rootadbcontroller.utils.ShizukuUtils.CommandResult
-import java.io.BufferedReader
 import java.io.DataOutputStream
 import java.io.IOException
-import java.io.InputStreamReader
 import java.net.Inet4Address
 import java.net.NetworkInterface
 import java.net.SocketException
@@ -125,14 +123,14 @@ object AdbUtils {
      * Gets the device's IP address.
      */
     fun getDeviceIpAddress(context: Context): String? {
-        val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager?
+        val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
         wifiManager?.connectionInfo?.let { wifiInfo ->
             val ipAddress = wifiInfo.ipAddress
             if (ipAddress != 0) {
                 return (ipAddress and 0xFF).toString() + "." +
-                        (ipAddress shr 8 and 0xFF) + "." +
-                        (ipAddress shr 16 and 0xFF) + "." +
-                        (ipAddress shr 24 and 0xFF)
+                    (ipAddress shr 8 and 0xFF) + "." +
+                    (ipAddress shr 16 and 0xFF) + "." +
+                    (ipAddress shr 24 and 0xFF)
             }
         }
         return getIpAddressFromNetworkInterfaces()
@@ -159,4 +157,3 @@ object AdbUtils {
         return CommandResult(process.exitValue() == 0, output, error, process.exitValue())
     }
 }
-

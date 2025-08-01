@@ -25,7 +25,7 @@ class OverlayService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+        windowManager = getSystemService(WINDOW_SERVICE) as? WindowManager ?: return
         overlayView = LayoutInflater.from(this).inflate(R.layout.overlay_layout, null)
 
         val layoutParamsType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -40,7 +40,7 @@ class OverlayService : Service() {
             WindowManager.LayoutParams.WRAP_CONTENT,
             layoutParamsType,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-            PixelFormat.TRANSLUCENT
+            PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = Gravity.CENTER
             x = 0
@@ -49,7 +49,7 @@ class OverlayService : Service() {
 
         overlayView?.let { view ->
             windowManager.addView(view, params)
-            
+
             val closeButton = view.findViewById<Button>(R.id.overlay_button)
             closeButton.setOnClickListener { stopSelf() }
         }
