@@ -5,8 +5,8 @@ import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
-import com.anti.rootadbcontroller.utils.ShizukuUtils
 import com.anti.rootadbcontroller.services.ShizukuCallbacks.*
+import com.anti.rootadbcontroller.utils.ShizukuUtils
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -110,7 +110,7 @@ class ShizukuManagerService : Service() {
         packageName: String,
         componentName: String,
         enabled: Boolean,
-        callback: ComponentCallback?
+        callback: ComponentCallback?,
     ) {
         executor.execute {
             val success = shizukuUtils.setComponentEnabled(packageName, componentName, enabled)
@@ -128,11 +128,13 @@ class ShizukuManagerService : Service() {
 
             when (operation.type) {
                 SystemOperation.Type.DISABLE_PACKAGE -> {
-                    success = shizukuUtils.setComponentEnabled(operation.packageName!!, operation.packageName, false)
+                    val packageName = operation.packageName ?: return@execute
+                    success = shizukuUtils.setComponentEnabled(packageName, packageName, false)
                     result = "Package " + if (success) "disabled" else "disable failed"
                 }
                 SystemOperation.Type.ENABLE_PACKAGE -> {
-                    success = shizukuUtils.setComponentEnabled(operation.packageName!!, operation.packageName, true)
+                    val packageName = operation.packageName ?: return@execute
+                    success = shizukuUtils.setComponentEnabled(packageName, packageName, true)
                     result = "Package " + if (success) "enabled" else "enable failed"
                 }
                 SystemOperation.Type.CLEAR_APP_DATA -> {
@@ -146,12 +148,16 @@ class ShizukuManagerService : Service() {
                     result = if (success) "App force stopped" else "Failed to force stop app"
                 }
                 SystemOperation.Type.GET_APP_INFO -> {
-                    val cmdResult = shizukuUtils.executeShellCommandWithResult("dumpsys package ${operation.packageName}")
+                    val cmdResult = shizukuUtils.executeShellCommandWithResult(
+                        "dumpsys package ${operation.packageName}",
+                    )
                     success = cmdResult.isSuccess
                     result = if (success) cmdResult.output else "Failed to get app info"
                 }
                 SystemOperation.Type.SET_SYSTEM_PROPERTY -> {
-                    val cmdResult = shizukuUtils.executeShellCommandWithResult("setprop ${operation.property} ${operation.value}")
+                    val cmdResult = shizukuUtils.executeShellCommandWithResult(
+                        "setprop ${operation.property} ${operation.value}",
+                    )
                     success = cmdResult.isSuccess
                     result = if (success) "Property set successfully" else "Failed to set property"
                 }
@@ -161,7 +167,8 @@ class ShizukuManagerService : Service() {
                     result = if (success) cmdResult.output else "Failed to get property"
                 }
                 SystemOperation.Type.CUSTOM_COMMAND -> {
-                    val cmdResult = shizukuUtils.executeShellCommandWithResult(operation.customCommand!!)
+                    val customCommand = operation.customCommand ?: return@execute
+                    val cmdResult = shizukuUtils.executeShellCommandWithResult(customCommand)
                     success = cmdResult.isSuccess
                     result = if (success) cmdResult.output else "Command execution failed"
                 }
@@ -200,8 +207,9 @@ class ShizukuManagerService : Service() {
             val command = if (includeSystem) "pm list packages" else "pm list packages -3"
             val result = shizukuUtils.executeShellCommandWithResult(command)
             callback?.onSystemOperationResult(
-                result.isSuccess, "LIST_PACKAGES",
-                if (result.isSuccess) result.output else "Failed to list packages"
+                result.isSuccess,
+                "LIST_PACKAGES",
+                if (result.isSuccess) result.output else "Failed to list packages",
             )
         }
     }
@@ -259,4 +267,3 @@ class ShizukuManagerService : Service() {
         private const val TAG = "ShizukuManagerService"
     }
 }
-
