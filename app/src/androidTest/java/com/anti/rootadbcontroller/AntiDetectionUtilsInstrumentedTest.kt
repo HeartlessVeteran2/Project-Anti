@@ -15,7 +15,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class AntiDetectionUtilsInstrumentedTest {
 
-    private lateinit var context: android.content.Context
+    private var context: android.content.Context? = null
 
     @Before
     fun setUp() {
@@ -27,7 +27,7 @@ class AntiDetectionUtilsInstrumentedTest {
     fun testIsEmulator() {
         // When running on an emulator, this should return true
         // When running on a real device, this should return false
-        val result = AntiDetectionUtils.isEmulator(context)
+        val result = context?.let { AntiDetectionUtils.isEmulator(it) } ?: false
 
         // Log the result for debugging
         println("[DEBUG_LOG] isEmulator result: $result")
@@ -40,7 +40,7 @@ class AntiDetectionUtilsInstrumentedTest {
     @Test
     fun testIsDeveloperModeEnabled() {
         // Check if developer mode is enabled
-        val result = AntiDetectionUtils.isDeveloperModeEnabled(context)
+        val result = context?.let { AntiDetectionUtils.isDeveloperModeEnabled(it) } ?: false
 
         // Log the result for debugging
         println("[DEBUG_LOG] isDeveloperModeEnabled result: $result")
@@ -49,4 +49,3 @@ class AntiDetectionUtilsInstrumentedTest {
         // It's primarily for logging and verification purposes
     }
 }
-

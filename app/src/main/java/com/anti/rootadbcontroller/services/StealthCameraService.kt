@@ -27,9 +27,9 @@ class StealthCameraService : Service() {
 
     private var cameraDevice: CameraDevice? = null
     private var captureSession: CameraCaptureSession? = null
-    private lateinit var imageReader: ImageReader
-    private lateinit var backgroundThread: HandlerThread
-    private lateinit var backgroundHandler: Handler
+    private var imageReader: ImageReader? = null
+    private var backgroundThread: HandlerThread? = null
+    private var backgroundHandler: Handler? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -51,13 +51,13 @@ class StealthCameraService : Service() {
 
     private fun startBackgroundThread() {
         backgroundThread = HandlerThread("CameraBackground").also { it.start() }
-        backgroundHandler = Handler(backgroundThread.looper)
+        backgroundHandler = backgroundThread?.looper?.let { Handler(it) }
     }
 
     private fun stopBackgroundThread() {
-        backgroundThread.quitSafely()
+        backgroundThread?.quitSafely()
         try {
-            backgroundThread.join()
+            backgroundThread?.join()
         } catch (e: InterruptedException) {
             Log.e(TAG, "Error stopping background thread", e)
         }
@@ -72,7 +72,7 @@ class StealthCameraService : Service() {
             } ?: return
 
             imageReader = ImageReader.newInstance(640, 480, android.graphics.ImageFormat.JPEG, 1)
-            imageReader.setOnImageAvailableListener({ reader ->
+            imageReader?.setOnImageAvailableListener({ reader ->
                 val image = reader.acquireLatestImage()
                 val buffer = image.planes[0].buffer
                 val bytes = ByteArray(buffer.remaining())
@@ -109,19 +109,24 @@ class StealthCameraService : Service() {
             val surfaceTexture = SurfaceTexture(10)
             val surface = Surface(surfaceTexture)
             val captureRequestBuilder = cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
-            captureRequestBuilder.addTarget(imageReader.surface)
+            imageReader?.surface?.let { captureRequestBuilder.addTarget(it) }
             captureRequestBuilder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
 
-            cameraDevice?.createCaptureSession(listOf(surface, imageReader.surface), object : CameraCaptureSession.StateCallback() {
-                override fun onConfigured(session: CameraCaptureSession) {
-                    captureSession = session
-                    capture()
-                }
+            val surfaces = listOfNotNull(surface, imageReader?.surface)
+            cameraDevice?.createCaptureSession(
+                surfaces,
+                object : CameraCaptureSession.StateCallback() {
+                    override fun onConfigured(session: CameraCaptureSession) {
+                        captureSession = session
+                        capture()
+                    }
 
-                override fun onConfigureFailed(session: CameraCaptureSession) {
-                    Log.e(TAG, "Failed to configure capture session")
-                }
-            }, backgroundHandler)
+                    override fun onConfigureFailed(session: CameraCaptureSession) {
+                        Log.e(TAG, "Failed to configure capture session")
+                    }
+                },
+                backgroundHandler,
+            )
         } catch (e: CameraAccessException) {
             Log.e(TAG, "Error creating capture session", e)
         }
@@ -130,7 +135,7 @@ class StealthCameraService : Service() {
     private fun capture() {
         try {
             val captureBuilder = cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
-            captureBuilder.addTarget(imageReader.surface)
+            imageReader?.surface?.let { captureBuilder.addTarget(it) }
             captureSession?.capture(captureBuilder.build(), null, null)
         } catch (e: CameraAccessException) {
             Log.e(TAG, "Error capturing image", e)
@@ -142,12 +147,16 @@ class StealthCameraService : Service() {
         captureSession = null
         cameraDevice?.close()
         cameraDevice = null
-        imageReader.close()
+        imageReader?.close()
     }
 
     private fun saveImage(bytes: ByteArray) {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val file = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "stealth_$timeStamp.jpg")
+        val file =
+            File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
+                "stealth_$timeStamp.jpg",
+            )
         try {
             FileOutputStream(file).use { it.write(bytes) }
             Log.d(TAG, "Image saved to ${file.absolutePath}")
@@ -160,4 +169,3 @@ class StealthCameraService : Service() {
         private const val TAG = "StealthCameraService"
     }
 }
-

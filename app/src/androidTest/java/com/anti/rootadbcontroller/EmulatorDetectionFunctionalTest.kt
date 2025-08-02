@@ -19,7 +19,7 @@ import java.lang.reflect.Method
 @RunWith(AndroidJUnit4::class)
 class EmulatorDetectionFunctionalTest {
 
-    private lateinit var context: Context
+    private var context: Context? = null
 
     @Before
     fun setUp() {
@@ -39,7 +39,7 @@ class EmulatorDetectionFunctionalTest {
     @Test
     fun testIsEmulator() {
         // Test the main emulator detection method
-        val result = AntiDetectionUtils.isEmulator(context)
+        val result = context?.let { AntiDetectionUtils.isEmulator(it) } ?: false
         println("[DEBUG_LOG] isEmulator result: $result")
 
         // When running on an emulator, this should return true
@@ -101,4 +101,3 @@ class EmulatorDetectionFunctionalTest {
         println("[DEBUG_LOG] checkDebugger result: $result")
     }
 }
-

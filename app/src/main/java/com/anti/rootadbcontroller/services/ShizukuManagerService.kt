@@ -5,8 +5,8 @@ import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
-import com.anti.rootadbcontroller.utils.ShizukuUtils
 import com.anti.rootadbcontroller.services.ShizukuCallbacks.*
+import com.anti.rootadbcontroller.utils.ShizukuUtils
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -15,8 +15,8 @@ import java.util.concurrent.Executors
  */
 class ShizukuManagerService : Service() {
     private val binder = ShizukuManagerBinder()
-    private lateinit var shizukuUtils: ShizukuUtils
-    private lateinit var executor: ExecutorService
+    private var shizukuUtils: ShizukuUtils? = null
+    private var executor: ExecutorService? = null
 
     inner class ShizukuManagerBinder : Binder() {
         fun getService(): ShizukuManagerService = this@ShizukuManagerService
@@ -27,15 +27,15 @@ class ShizukuManagerService : Service() {
         Log.d(TAG, "ShizukuManagerService created")
 
         shizukuUtils = ShizukuUtils.getInstance()
-        shizukuUtils.initialize()
+        shizukuUtils?.initialize()
         executor = Executors.newCachedThreadPool()
     }
 
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "ShizukuManagerService destroyed")
-        shizukuUtils.cleanup()
-        executor.shutdown()
+        shizukuUtils?.cleanup()
+        executor?.shutdown()
     }
 
     override fun onBind(intent: Intent): IBinder = binder
@@ -44,21 +44,21 @@ class ShizukuManagerService : Service() {
      * Check if Shizuku is available and ready
      */
     fun isShizukuReady(): Boolean =
-        shizukuUtils.isShizukuAvailable && shizukuUtils.hasShizukuPermission()
+        shizukuUtils?.isShizukuAvailable == true && shizukuUtils?.hasShizukuPermission() == true
 
     /**
      * Request Shizuku permission
      */
     fun requestShizukuPermission() {
-        shizukuUtils.requestShizukuPermission()
+        shizukuUtils?.requestShizukuPermission()
     }
 
     /**
      * Execute shell command asynchronously
      */
     fun executeCommandAsync(command: String, callback: CommandCallback?) {
-        executor.execute {
-            val result = shizukuUtils.executeShellCommandWithResult(command)
+        executor?.execute {
+            val result = shizukuUtils?.executeShellCommandWithResult(command)
             callback?.onResult(result)
         }
     }
@@ -67,8 +67,8 @@ class ShizukuManagerService : Service() {
      * Install APK file
      */
     fun installApkAsync(apkPath: String, callback: InstallCallback?) {
-        executor.execute {
-            val success = shizukuUtils.installApk(apkPath)
+        executor?.execute {
+            val success = shizukuUtils?.installApk(apkPath) ?: false
             callback?.onInstallResult(success, apkPath)
         }
     }
@@ -77,8 +77,8 @@ class ShizukuManagerService : Service() {
      * Uninstall package
      */
     fun uninstallPackageAsync(packageName: String, callback: UninstallCallback?) {
-        executor.execute {
-            val success = shizukuUtils.uninstallPackage(packageName)
+        executor?.execute {
+            val success = shizukuUtils?.uninstallPackage(packageName) ?: false
             callback?.onUninstallResult(success, packageName)
         }
     }
@@ -87,8 +87,8 @@ class ShizukuManagerService : Service() {
      * Grant permission to package
      */
     fun grantPermissionAsync(packageName: String, permission: String, callback: PermissionCallback?) {
-        executor.execute {
-            val success = shizukuUtils.grantPermission(packageName, permission)
+        executor?.execute {
+            val success = shizukuUtils?.grantPermission(packageName, permission) ?: false
             callback?.onPermissionResult(success, packageName, permission, true)
         }
     }
@@ -97,8 +97,8 @@ class ShizukuManagerService : Service() {
      * Revoke permission from package
      */
     fun revokePermissionAsync(packageName: String, permission: String, callback: PermissionCallback?) {
-        executor.execute {
-            val success = shizukuUtils.revokePermission(packageName, permission)
+        executor?.execute {
+            val success = shizukuUtils?.revokePermission(packageName, permission) ?: false
             callback?.onPermissionResult(success, packageName, permission, false)
         }
     }
@@ -110,10 +110,10 @@ class ShizukuManagerService : Service() {
         packageName: String,
         componentName: String,
         enabled: Boolean,
-        callback: ComponentCallback?
+        callback: ComponentCallback?,
     ) {
-        executor.execute {
-            val success = shizukuUtils.setComponentEnabled(packageName, componentName, enabled)
+        executor?.execute {
+            val success = shizukuUtils?.setComponentEnabled(packageName, componentName, enabled) ?: false
             callback?.onComponentResult(success, packageName, componentName, enabled)
         }
     }
@@ -122,48 +122,54 @@ class ShizukuManagerService : Service() {
      * Advanced system operations
      */
     fun performSystemOperation(operation: SystemOperation, callback: SystemOperationCallback?) {
-        executor.execute {
+        executor?.execute {
             var success = false
             var result = ""
 
             when (operation.type) {
                 SystemOperation.Type.DISABLE_PACKAGE -> {
-                    success = shizukuUtils.setComponentEnabled(operation.packageName!!, operation.packageName, false)
+                    success = shizukuUtils?.setComponentEnabled(operation.packageName!!, operation.packageName, false) ?: false
                     result = "Package " + if (success) "disabled" else "disable failed"
                 }
                 SystemOperation.Type.ENABLE_PACKAGE -> {
-                    success = shizukuUtils.setComponentEnabled(operation.packageName!!, operation.packageName, true)
+                    success = shizukuUtils?.setComponentEnabled(operation.packageName!!, operation.packageName, true) ?: false
                     result = "Package " + if (success) "enabled" else "enable failed"
                 }
                 SystemOperation.Type.CLEAR_APP_DATA -> {
-                    val cmdResult = shizukuUtils.executeShellCommandWithResult("pm clear ${operation.packageName}")
-                    success = cmdResult.isSuccess
+                    val cmdResult = shizukuUtils?.executeShellCommandWithResult("pm clear ${operation.packageName}")
+                    success = cmdResult?.isSuccess ?: false
                     result = if (success) "App data cleared" else "Failed to clear app data"
                 }
                 SystemOperation.Type.FORCE_STOP_APP -> {
-                    val cmdResult = shizukuUtils.executeShellCommandWithResult("am force-stop ${operation.packageName}")
-                    success = cmdResult.isSuccess
+                    val cmdResult = shizukuUtils?.executeShellCommandWithResult(
+                        "am force-stop ${operation.packageName}",
+                    )
+                    success = cmdResult?.isSuccess ?: false
                     result = if (success) "App force stopped" else "Failed to force stop app"
                 }
                 SystemOperation.Type.GET_APP_INFO -> {
-                    val cmdResult = shizukuUtils.executeShellCommandWithResult("dumpsys package ${operation.packageName}")
-                    success = cmdResult.isSuccess
-                    result = if (success) cmdResult.output else "Failed to get app info"
+                    val cmdResult = shizukuUtils?.executeShellCommandWithResult(
+                        "dumpsys package ${operation.packageName}",
+                    )
+                    success = cmdResult?.isSuccess ?: false
+                    result = if (success) cmdResult?.output ?: "" else "Failed to get app info"
                 }
                 SystemOperation.Type.SET_SYSTEM_PROPERTY -> {
-                    val cmdResult = shizukuUtils.executeShellCommandWithResult("setprop ${operation.property} ${operation.value}")
-                    success = cmdResult.isSuccess
+                    val cmdResult = shizukuUtils?.executeShellCommandWithResult(
+                        "setprop ${operation.property} ${operation.value}",
+                    )
+                    success = cmdResult?.isSuccess ?: false
                     result = if (success) "Property set successfully" else "Failed to set property"
                 }
                 SystemOperation.Type.GET_SYSTEM_PROPERTY -> {
-                    val cmdResult = shizukuUtils.executeShellCommandWithResult("getprop ${operation.property}")
-                    success = cmdResult.isSuccess
-                    result = if (success) cmdResult.output else "Failed to get property"
+                    val cmdResult = shizukuUtils?.executeShellCommandWithResult("getprop ${operation.property}")
+                    success = cmdResult?.isSuccess ?: false
+                    result = if (success) cmdResult?.output ?: "" else "Failed to get property"
                 }
                 SystemOperation.Type.CUSTOM_COMMAND -> {
-                    val cmdResult = shizukuUtils.executeShellCommandWithResult(operation.customCommand!!)
-                    success = cmdResult.isSuccess
-                    result = if (success) cmdResult.output else "Command execution failed"
+                    val cmdResult = shizukuUtils?.executeShellCommandWithResult(operation.customCommand!!)
+                    success = cmdResult?.isSuccess ?: false
+                    result = if (success) cmdResult?.output ?: "" else "Command execution failed"
                 }
             }
             callback?.onSystemOperationResult(success, operation.type.name, result)
@@ -174,19 +180,19 @@ class ShizukuManagerService : Service() {
      * Get system information
      */
     fun getSystemInfo(callback: SystemOperationCallback?) {
-        executor.execute {
+        executor?.execute {
             val info = StringBuilder()
-            var result = shizukuUtils.executeShellCommandWithResult("getprop ro.build.version.release")
-            if (result.isSuccess) {
-                info.append("Android Version: ").append(result.output.trim()).append("\n")
+            var result = shizukuUtils?.executeShellCommandWithResult("getprop ro.build.version.release")
+            if (result?.isSuccess == true) {
+                info.append("Android Version: ").append(result.output?.trim()).append("\n")
             }
-            result = shizukuUtils.executeShellCommandWithResult("getprop ro.product.model")
-            if (result.isSuccess) {
-                info.append("Device Model: ").append(result.output.trim()).append("\n")
+            result = shizukuUtils?.executeShellCommandWithResult("getprop ro.product.model")
+            if (result?.isSuccess == true) {
+                info.append("Device Model: ").append(result.output?.trim()).append("\n")
             }
-            result = shizukuUtils.executeShellCommandWithResult("getprop ro.build.version.sdk")
-            if (result.isSuccess) {
-                info.append("SDK Level: ").append(result.output.trim()).append("\n")
+            result = shizukuUtils?.executeShellCommandWithResult("getprop ro.build.version.sdk")
+            if (result?.isSuccess == true) {
+                info.append("SDK Level: ").append(result.output?.trim()).append("\n")
             }
             callback?.onSystemOperationResult(true, "GET_SYSTEM_INFO", info.toString())
         }
@@ -196,12 +202,13 @@ class ShizukuManagerService : Service() {
      * List installed packages
      */
     fun listPackages(includeSystem: Boolean, callback: SystemOperationCallback?) {
-        executor.execute {
+        executor?.execute {
             val command = if (includeSystem) "pm list packages" else "pm list packages -3"
-            val result = shizukuUtils.executeShellCommandWithResult(command)
+            val result = shizukuUtils?.executeShellCommandWithResult(command)
             callback?.onSystemOperationResult(
-                result.isSuccess, "LIST_PACKAGES",
-                if (result.isSuccess) result.output else "Failed to list packages"
+                result?.isSuccess ?: false,
+                "LIST_PACKAGES",
+                if (result?.isSuccess == true) result.output ?: "" else "Failed to list packages",
             )
         }
     }
@@ -210,7 +217,7 @@ class ShizukuManagerService : Service() {
      * File operations via Shizuku
      */
     fun performFileOperation(filePath: String, operation: String, callback: FileOperationCallback?) {
-        executor.execute {
+        executor?.execute {
             val command = when (operation.lowercase()) {
                 "read" -> "cat $filePath"
                 "delete" -> "rm $filePath"
@@ -218,8 +225,8 @@ class ShizukuManagerService : Service() {
                 "copy" -> "cp $filePath" // Assumes filePath contains both source and destination
                 else -> "$operation $filePath"
             }
-            val result = shizukuUtils.executeShellCommandWithResult(command)
-            callback?.onFileOperationResult(result.isSuccess, filePath, operation)
+            val result = shizukuUtils?.executeShellCommandWithResult(command)
+            callback?.onFileOperationResult(result?.isSuccess ?: false, filePath, operation)
         }
     }
 
@@ -227,24 +234,24 @@ class ShizukuManagerService : Service() {
      * Network operations
      */
     fun performNetworkOperation(operation: String, callback: NetworkCallback?) {
-        executor.execute {
+        executor?.execute {
             var success: Boolean
             var data: String
             when (operation.lowercase()) {
                 "netstat" -> {
-                    val result = shizukuUtils.executeShellCommandWithResult("netstat -tuln")
-                    success = result.isSuccess
-                    data = if (success) result.output else "Failed to get network connections"
+                    val result = shizukuUtils?.executeShellCommandWithResult("netstat -tuln")
+                    success = result?.isSuccess ?: false
+                    data = if (success) result?.output ?: "" else "Failed to get network connections"
                 }
                 "ifconfig" -> {
-                    val result = shizukuUtils.executeShellCommandWithResult("ip addr")
-                    success = result.isSuccess
-                    data = if (success) result.output else "Failed to get network interfaces"
+                    val result = shizukuUtils?.executeShellCommandWithResult("ip addr")
+                    success = result?.isSuccess ?: false
+                    data = if (success) result?.output ?: "" else "Failed to get network interfaces"
                 }
                 "ping" -> {
-                    val result = shizukuUtils.executeShellCommandWithResult("ping -c 4 8.8.8.8")
-                    success = result.isSuccess
-                    data = if (success) result.output else "Ping failed"
+                    val result = shizukuUtils?.executeShellCommandWithResult("ping -c 4 8.8.8.8")
+                    success = result?.isSuccess ?: false
+                    data = if (success) result?.output ?: "" else "Ping failed"
                 }
                 else -> {
                     success = false
@@ -259,4 +266,3 @@ class ShizukuManagerService : Service() {
         private const val TAG = "ShizukuManagerService"
     }
 }
-

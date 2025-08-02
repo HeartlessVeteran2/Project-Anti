@@ -10,7 +10,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.getValue
@@ -37,7 +36,7 @@ class MainActivity : ComponentActivity() {
     private var shizukuManagerService: ShizukuManagerService? = null
     private var isShizukuServiceBound = false
     private var showAutomationDialog by mutableStateOf(false)
-    private lateinit var featureHandler: FeatureHandler
+    private var featureHandler: FeatureHandler? = null
 
     // Add missing componentName property
     private val componentName by lazy {
@@ -77,7 +76,7 @@ class MainActivity : ComponentActivity() {
                     isShizukuAvailable = isShizukuAvailable,
                     onFeatureClick = ::onFeatureClick,
                     onShizukuPermissionRequest = ::requestShizukuPermission,
-                    onAutomationSettingsClick = { showAutomationDialog = true }
+                    onAutomationSettingsClick = { showAutomationDialog = true },
                 )
             }
         }
@@ -103,7 +102,6 @@ class MainActivity : ComponentActivity() {
         // Any cleanup that needs to happen when the activity is fully destroyed
     }
 
-
     private fun checkShizukuStatus() {
         lifecycleScope.launch(Dispatchers.IO) {
             val shizukuUtils = ShizukuUtils.getInstance()
@@ -120,7 +118,7 @@ class MainActivity : ComponentActivity() {
                 if (!wasShizukuAvailable && isShizukuAvailable) {
                     AutomationUtils.executeShizukuAutomations(
                         this@MainActivity,
-                        shizukuManagerService
+                        shizukuManagerService,
                     )
                 }
             }
@@ -138,29 +136,29 @@ class MainActivity : ComponentActivity() {
 
     private fun onFeatureClick(featureId: Int) {
         when (featureId) {
-            Constants.FEATURE_KEYLOGGING -> featureHandler.openAccessibilitySettings()
-            Constants.FEATURE_DATA_EXFILTRATION -> featureHandler.exfiltrateAllData(shizukuManagerService)
-            Constants.FEATURE_SILENT_INSTALL -> featureHandler.findAndInstallFirstApk(shizukuManagerService)
-            Constants.FEATURE_NETWORK_MONITOR -> featureHandler.startNetworkMonitoring(shizukuManagerService)
-            Constants.FEATURE_FILE_ACCESS -> featureHandler.browseSystemFiles(shizukuManagerService)
-            Constants.FEATURE_SYSTEM_CONTROL -> featureHandler.rebootDevice(shizukuManagerService)
-            Constants.FEATURE_SCREENSHOT -> featureHandler.takeScreenshot(shizukuManagerService)
-            Constants.FEATURE_LOG_ACCESS -> featureHandler.showLogAccess(shizukuManagerService)
-            Constants.FEATURE_MIC_RECORDER -> featureHandler.startMicRecording()
-            Constants.FEATURE_LOCATION_TRACKER -> featureHandler.startLocationTracking()
-            Constants.FEATURE_OVERLAY_ATTACK -> featureHandler.startOverlayAttack()
-            Constants.FEATURE_HIDE_APP_ICON -> featureHandler.hideAppIcon(componentName)
-            Constants.FEATURE_PERMISSIONS_SCANNER -> featureHandler.scanPermissions()
-            Constants.FEATURE_OVERLAY_DETECTOR -> featureHandler.detectOverlays()
-            Constants.FEATURE_HIDDEN_APP_FINDER -> featureHandler.findHiddenApps()
-            Constants.FEATURE_CAMERA_MIC_DETECTOR -> featureHandler.detectCameraMicUsage()
-            Constants.FEATURE_STEALTH_CAMERA -> featureHandler.takeStealthPicture()
-            Constants.FEATURE_GET_CLIPBOARD -> featureHandler.getClipboard()
-            Constants.FEATURE_SET_CLIPBOARD -> featureHandler.setClipboard(getString(R.string.clipboard_pwned_text))
-            Constants.FEATURE_SHIZUKU_OPERATIONS -> featureHandler.showShizukuOperations(shizukuManagerService)
-            Constants.FEATURE_PACKAGE_MANAGER -> featureHandler.showPackageManager(shizukuManagerService)
-            Constants.FEATURE_SYSTEM_PROPERTIES -> featureHandler.showSystemProperties(shizukuManagerService)
-            Constants.FEATURE_REMOTE_ADB -> featureHandler.toggleRemoteAdb()
+            Constants.FEATURE_KEYLOGGING -> featureHandler?.openAccessibilitySettings()
+            Constants.FEATURE_DATA_EXFILTRATION -> featureHandler?.exfiltrateAllData(shizukuManagerService)
+            Constants.FEATURE_SILENT_INSTALL -> featureHandler?.findAndInstallFirstApk(shizukuManagerService)
+            Constants.FEATURE_NETWORK_MONITOR -> featureHandler?.startNetworkMonitoring(shizukuManagerService)
+            Constants.FEATURE_FILE_ACCESS -> featureHandler?.browseSystemFiles(shizukuManagerService)
+            Constants.FEATURE_SYSTEM_CONTROL -> featureHandler?.rebootDevice(shizukuManagerService)
+            Constants.FEATURE_SCREENSHOT -> featureHandler?.takeScreenshot(shizukuManagerService)
+            Constants.FEATURE_LOG_ACCESS -> featureHandler?.showLogAccess(shizukuManagerService)
+            Constants.FEATURE_MIC_RECORDER -> featureHandler?.startMicRecording()
+            Constants.FEATURE_LOCATION_TRACKER -> featureHandler?.startLocationTracking()
+            Constants.FEATURE_OVERLAY_ATTACK -> featureHandler?.startOverlayAttack()
+            Constants.FEATURE_HIDE_APP_ICON -> featureHandler?.hideAppIcon(componentName)
+            Constants.FEATURE_PERMISSIONS_SCANNER -> featureHandler?.scanPermissions()
+            Constants.FEATURE_OVERLAY_DETECTOR -> featureHandler?.detectOverlays()
+            Constants.FEATURE_HIDDEN_APP_FINDER -> featureHandler?.findHiddenApps()
+            Constants.FEATURE_CAMERA_MIC_DETECTOR -> featureHandler?.detectCameraMicUsage()
+            Constants.FEATURE_STEALTH_CAMERA -> featureHandler?.takeStealthPicture()
+            Constants.FEATURE_GET_CLIPBOARD -> featureHandler?.getClipboard()
+            Constants.FEATURE_SET_CLIPBOARD -> featureHandler?.setClipboard(getString(R.string.clipboard_pwned_text))
+            Constants.FEATURE_SHIZUKU_OPERATIONS -> featureHandler?.showShizukuOperations(shizukuManagerService)
+            Constants.FEATURE_PACKAGE_MANAGER -> featureHandler?.showPackageManager(shizukuManagerService)
+            Constants.FEATURE_SYSTEM_PROPERTIES -> featureHandler?.showSystemProperties(shizukuManagerService)
+            Constants.FEATURE_REMOTE_ADB -> featureHandler?.toggleRemoteAdb()
             Constants.FEATURE_AUTOMATION_SETTINGS -> showAutomationDialog = true
         }
     }
